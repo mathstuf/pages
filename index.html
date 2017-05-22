@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+
+
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Introduction to Ghostflow &mdash; Ghostflow and you</title>
+    
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/styles.css" type="text/css" />
+    <link rel="stylesheet" href="_static/slides.css" type="text/css" />
+    
+    <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+    
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/common.js"></script>
+    
+    <script type="text/javascript" src="_static/slides.js"></script>
+    <script type="text/javascript" src="_static/sync.js"></script>
+    <script type="text/javascript" src="_static/controller.js"></script>
+    <script type="text/javascript" src="_static/init.js"></script>
+    
+    
+    <script type="text/javascript" src="_static/custom.js"></script
+    
+    <link rel="top" title="Ghostflow and you" href="#" />
+<script type="text/javascript" src="_static/gitgraph.min.js"></script>
+
+  </head>
+  <body>
+
+<section
+   id="slide_container"
+   class='slides layout-regular'>
+
+
+  
+<article class="slide level-1" id="introduction-to-ghostflow">
+
+<h1>Introduction to Ghostflow</h1>
+
+<p>Kitware Tech Lunch - Spring 2017</p>
+<p>Ben Boeckel and Brad King, Kitware, Inc.</p>
+
+
+
+<div class="slide-no">1</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-2" id="introduction">
+
+<h2>Introduction</h2>
+
+
+
+
+<div class="slide-no">2</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="what-is-ghostflow">
+
+<h3>What is Ghostflow?</h3>
+
+<ul class="simple">
+<li>The name comes from &quot;git hosted workflow&quot;</li>
+<li>Manages a workflow for a project</li>
+<li>Automatic &quot;code cleanliness&quot; checks</li>
+<li>Managed merge access (can give access through the robot, but not directly)</li>
+<li>Label management</li>
+<li>Managing access to testing resources (e.g., buildbot)</li>
+<li>Batch testing of merge requests (integration testing)</li>
+<li>Handling test data uploads (e.g., ExternalData)</li>
+</ul>
+
+
+
+<div class="slide-no">3</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="design">
+
+<h3>Design</h3>
+
+<ul class="simple">
+<li>Stateless<ul>
+<li>All state is stored on the hosting service and in Git</li>
+<li>Can be restarted without worry</li>
+</ul>
+</li>
+<li>Robust<ul>
+<li>If it goes down, it can pick up where it left off</li>
+<li>Logs errors (<code class="docutils literal"><span class="pre">Error:</span> <span class="pre">failed</span> <span class="pre">to</span> <span class="pre">merge</span> <span class="pre">the</span> <span class="pre">tree:</span> <span class="pre">???</span></code>)</li>
+</ul>
+</li>
+<li>Abstracted over hosting services<ul>
+<li>GitLab support now</li>
+<li>Github possible</li>
+</ul>
+</li>
+</ul>
+
+
+
+<div class="slide-no">4</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="implementation-strategy">
+
+<h3>Implementation Strategy</h3>
+
+<ul class="simple">
+<li>A separate program listens for <code class="docutils literal"><span class="pre">POST</span></code> requests over HTTP from Gitlab (or
+any webhook delivery system)</li>
+<li>Categorizes the request and writes the data with the assigned category into
+a directory as a JSON file</li>
+<li>A <code class="docutils literal"><span class="pre">director</span></code> watches this directory and processes them in order</li>
+<li>Depending on the outcome, the JSON file is moved into one of <code class="docutils literal"><span class="pre">accept</span></code>,
+<code class="docutils literal"><span class="pre">reject</span></code>, or <code class="docutils literal"><span class="pre">fail</span></code> directories with a timestamp and file indicating the
+reason for the failure or rejection</li>
+<li>Also supports retrying jobs (e.g., on a failed push for a merge action;
+retrying the merge later is acceptable)</li>
+</ul>
+
+
+
+<div class="slide-no">5</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="implementation">
+
+<h3>Implementation</h3>
+
+<ul class="simple">
+<li>Graceful error handling</li>
+<li>Handles Unicode cleanly</li>
+<li>Separation between mechanism and policy</li>
+<li>Implemented in Rust</li>
+<li>Fast (reports in seconds rather than minutes)</li>
+<li>Clean multithreading</li>
+</ul>
+
+
+
+<div class="slide-no">6</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-2" id="actions">
+
+<h2>Actions</h2>
+
+
+
+
+<div class="slide-no">7</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="how-they-work">
+
+<h3>How they work</h3>
+
+<ol class="arabic simple">
+<li>A comment is made on the hosting service</li>
+<li>The director receives a webhook for the new comment</li>
+<li>The comment body is scanned for <code class="docutils literal"><span class="pre">Do:</span></code> commands in trailers</li>
+<li>For any commands found, permissions and consistency are verified (e.g.,
+<code class="docutils literal"><span class="pre">test</span></code> and <code class="docutils literal"><span class="pre">merge</span></code> make no sense together)</li>
+<li>The requested actions are performed</li>
+</ol>
+
+
+
+<div class="slide-no">8</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="check">
+
+<h3>check</h3>
+
+<ul class="simple">
+<li>Can enforce the project's preferred cleanliness policies including:<ul>
+<li>Submodule verification</li>
+<li>Formatting</li>
+<li>Commit messages</li>
+<li>Path names</li>
+<li>Symlinks</li>
+</ul>
+</li>
+<li>Most can be run either as a per-commit check (current) or topic checks
+(pending tests and review)</li>
+<li>Can also check topic topology: no root commits, enforcing third-party
+branches are handled well</li>
+</ul>
+
+
+
+<div class="slide-no">9</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="test">
+
+<h3>test</h3>
+
+<ul class="simple">
+<li>Hands off requests to the appropriate backend<ul>
+<li>Buildbot &quot;job&quot; file format</li>
+<li>Create a hidden ref on the main repository for use by nightly machines</li>
+</ul>
+</li>
+<li>Other backends possible</li>
+</ul>
+
+
+
+<div class="slide-no">10</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="reformat">
+
+<h3>reformat</h3>
+
+<ul class="simple">
+<li>Rewrites commits to adhere to code formatting standards of the project</li>
+<li>Preserves branch topology (i.e., merge commits stay as merge commits)</li>
+<li>Can remove manual reformatting commits</li>
+<li>Can handle any &quot;rewriting&quot; code formatter. <code class="docutils literal"><span class="pre">clang-format</span></code> and <code class="docutils literal"><span class="pre">autopep8</span></code>
+are being used today</li>
+<li>May also be used for things such as Doxygen comment reformatting or
+copyright years</li>
+<li>Not all checkers are reformatters; they must rewrite the expected output,
+not just what's wrong with it (e.g., <code class="docutils literal"><span class="pre">flake8</span></code> does not reformat)</li>
+</ul>
+
+
+
+<div class="slide-no">11</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="stage">
+
+<h3>stage</h3>
+
+<ul class="simple">
+<li>Manages a <code class="docutils literal"><span class="pre">stage</span></code> branch on top of an integration branch for batch testing</li>
+<li>Used by CMake to test a collection of topics across all nightly machines</li>
+<li>Any update to the base branch respins the stage merges</li>
+<li>Merge conflicts report back to the discussion and remove the topic from the
+stage</li>
+<li>Maintains a &quot;first come, first served&quot; policy</li>
+</ul>
+
+
+
+<div class="slide-no">12</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="id1">
+
+<h3>stage</h3>
+
+<ul class="simple">
+<li>Here, three branches have been staged on top of <code class="docutils literal"><span class="pre">master</span></code>:</li>
+</ul>
+<canvas id="stage-graph"></canvas>
+<script type="text/javascript">
+    (function () {
+        var graph = new GitGraph({
+            elementId: "stage-graph",
+            template: "contrast",
+            orientation: "vertical",
+            author: "Ben Boeckel",
+        });
+        var master = graph.branch("master");
+        master.commit("History of master");
+
+        var topic1 = graph.branch({
+            parentBranch: master,
+            name: "topic-1",
+            column: 2,
+        });
+        topic1.commit("A commit on topic-1");
+
+        var topic2 = graph.branch({
+            parentBranch: master,
+            name: "topic-2",
+            column: 3,
+        });
+        topic2.commit("A commit on topic-2");
+
+        var topic3 = graph.branch({
+            parentBranch: master,
+            name: "topic-3",
+            column: 4,
+        });
+        topic3.commit("A commit on topic-3");
+
+        master.commit("HEAD of master");
+        var stage = graph.branch({
+            parentBranch: master,
+            name: "stage",
+            column: 1,
+        });
+        topic1.merge(stage, {
+            author: "Ghostflow Director",
+        });
+        topic2.merge(stage, {
+            author: "Ghostflow Director",
+        });
+        topic3.merge(stage, {
+            author: "Ghostflow Director",
+        });
+    })();
+</script>
+
+
+
+<div class="slide-no">13</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="id2">
+
+<h3>stage</h3>
+
+<ul class="simple">
+<li>If the second topic is updated and staged again, it is pushed to the end of
+the line:</li>
+</ul>
+<canvas id="stage-graph-rewrite"></canvas>
+<script type="text/javascript">
+    (function () {
+        var graph = new GitGraph({
+            elementId: "stage-graph-rewrite",
+            template: "contrast",
+            orientation: "vertical",
+            author: "Ben Boeckel",
+        });
+        var master = graph.branch("master");
+        master.commit("History of master");
+
+        var topic1 = graph.branch({
+            parentBranch: master,
+            name: "topic-1",
+            column: 2,
+        });
+        topic1.commit("A commit on topic-1");
+
+        var topic2 = graph.branch({
+            parentBranch: master,
+            name: "topic-2",
+            column: 3,
+        });
+        topic2.commit("A commit on topic-2");
+
+        var topic3 = graph.branch({
+            parentBranch: master,
+            name: "topic-3",
+            column: 4,
+        });
+        topic3.commit("A commit on topic-3");
+        topic2.commit({
+            message: "A new commit on topic-2",
+            dotStrokeWidth: 5,
+            dotStrokeColor: "#000000",
+        });
+
+        master.commit("HEAD of master");
+        var stage = graph.branch({
+            parentBranch: master,
+            name: "stage",
+            column: 1,
+        });
+        topic1.merge(stage, {
+            author: "Ghostflow Director",
+        });
+        topic3.merge(stage, {
+            author: "Ghostflow Director",
+        });
+        topic2.merge(stage, {
+            author: "Ghostflow Director",
+            dotStrokeWidth: 5,
+            dotStrokeColor: "#000000",
+        });
+    })();
+</script>
+
+
+
+<div class="slide-no">14</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="id3">
+
+<h3>stage</h3>
+
+<ul class="simple">
+<li>If the master branch is updated to conflict with a topic, the topic is
+removed from the stage:</li>
+</ul>
+<canvas id="stage-graph-conflict"></canvas>
+<script type="text/javascript">
+    (function () {
+        var graph = new GitGraph({
+            elementId: "stage-graph-conflict",
+            template: "contrast",
+            orientation: "vertical",
+            author: "Ben Boeckel",
+        });
+        var master = graph.branch("master");
+        master.commit("History of master");
+
+        var topic1 = graph.branch({
+            parentBranch: master,
+            name: "topic-1",
+            column: 2,
+        });
+        topic1.commit("A commit on topic-1");
+
+        var topic2 = graph.branch({
+            parentBranch: master,
+            name: "topic-2",
+            column: 3,
+        });
+        topic2.commit("A commit on topic-2");
+
+        var topic3 = graph.branch({
+            parentBranch: master,
+            name: "topic-3",
+            column: 4,
+        });
+        topic3.commit("A commit on topic-3");
+        topic2.commit("A new commit on topic-2");
+
+        master.commit("HEAD of master");
+        master.commit({
+            message: "Create conflict with topic-1",
+            dotStrokeWidth: 5,
+            dotStrokeColor: "#000000",
+        });
+        var stage = graph.branch({
+            parentBranch: master,
+            name: "stage",
+            column: 1,
+        });
+        topic3.merge(stage, {
+            author: "Ghostflow Director",
+            dotStrokeWidth: 5,
+            dotStrokeColor: "#000000",
+        });
+        topic2.merge(stage, {
+            author: "Ghostflow Director",
+            dotStrokeWidth: 5,
+            dotStrokeColor: "#000000",
+        });
+    })();
+</script>
+
+
+
+<div class="slide-no">15</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="merge">
+
+<h3>merge</h3>
+
+<ul class="simple">
+<li>Collects feedback on the topic from the discussion.<ul>
+<li>Looks at comments for <code class="docutils literal"><span class="pre">+1</span></code>, <code class="docutils literal"><span class="pre">+2</span></code>, etc.</li>
+<li>Also uses emoji for feedback (e.g., 🎉)</li>
+</ul>
+</li>
+<li>Formats the commit message</li>
+<li>Collects merge conflict information<ul>
+<li>Including checking for submodule resolutions</li>
+<li>Actually posts it back to the discussion</li>
+</ul>
+</li>
+</ul>
+
+
+
+<div class="slide-no">16</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="follow">
+
+<h3>follow</h3>
+
+<ul class="simple">
+<li>Creates a stable reference for nightly testing</li>
+<li>Ensures that all nightly machines test the same commit (instead of grabbing
+a commit from a few hours later)</li>
+</ul>
+
+
+
+<div class="slide-no">17</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-2" id="future-work">
+
+<h2>Future Work</h2>
+
+
+
+
+<div class="slide-no">18</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="features">
+
+<h3>Features</h3>
+
+<ul class="simple">
+<li>Milestone maintenance (marking issues as <code class="docutils literal"><span class="pre">Fixed</span> <span class="pre">in</span></code>)</li>
+<li>Label maintenence (e.g., based on stage or testing status)</li>
+<li>Look at <code class="docutils literal"><span class="pre">Rejected-by</span></code> or <code class="docutils literal"><span class="pre">-1</span></code> comments</li>
+<li>Require reviewer approval</li>
+<li>Greet new contributors</li>
+<li>Check for status checks (e.g., Travis or Buildbot)</li>
+</ul>
+
+
+
+<div class="slide-no">19</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+<article class="slide level-3" id="id4">
+
+<h3>Features</h3>
+
+<ul class="simple">
+<li>Assigning reviews based on code editing history</li>
+<li>Github support</li>
+<li>Handling backports automatically</li>
+</ul>
+<canvas id="backport-graph"></canvas>
+<script type="text/javascript">
+    (function () {
+        var graph = new GitGraph({
+            elementId: "backport-graph",
+            template: "contrast",
+            orientation: "vertical",
+            author: "Ben Boeckel",
+        });
+
+        var master = graph.branch("master");
+        master.commit("History of master");
+
+        var release = graph.branch({
+            parentBranch: master,
+            name: "release",
+            column: 3,
+        });
+        release.commit("History of release")
+
+        var topic = graph.branch({
+            parentBranch: release,
+            name: "topic-simple",
+            column: 2,
+        });
+        topic.commit("A bugfix");
+        topic.merge(release, {
+            author: "Ghostflow Director",
+        });
+        topic.merge(master, {
+            author: "Ghostflow Director",
+        });
+        release.merge(master, {
+            author: "Ghostflow Director",
+        });
+
+        var topic = graph.branch({
+            parentBranch: master,
+            name: "topic",
+            column: 1,
+        });
+        topic.commit("A bugfix which conflicts with release");
+        var backport = graph.branch({
+            parentBranch: release,
+            name: "backport",
+            column: 2,
+        });
+        backport.commit("A bugfix applied to release");
+        backport.merge(topic);
+
+        backport.merge(release, {
+            author: "Ghostflow Director",
+        });
+        topic.merge(master, {
+            author: "Ghostflow Director",
+        });
+        release.merge(master, {
+            author: "Ghostflow Director",
+        });
+    })();
+</script>
+
+
+
+<div class="slide-no">20</div>
+
+
+<div class="slide-footer">
+<a class="slide-footer-image" href="http://creativecommons.org/licenses/by-sa/4.0/">
+  <img border="0" src="_static/cc-by-sa.png" alt="CC BY-SA" />
+</a>
+<span class="slide-footer-text">
+  Kitware Tech Lunch - Spring 2017 - Introduction to Ghostflow - Kitware, Inc.
+</span>
+</div>
+
+</article>
+
+</section>
+
+<section id="slide_notes">
+
+</section>
+
+  </body>
+</html>

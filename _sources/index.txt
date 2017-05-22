@@ -1,0 +1,244 @@
+Introduction to Ghostflow
+#########################
+
+Kitware Tech Lunch - Spring 2017
+
+Ben Boeckel and Brad King, Kitware, Inc.
+
+Introduction
+============
+
+What is Ghostflow?
+------------------
+
+* The name comes from "git hosted workflow"
+
+* Manages a workflow for a project
+
+* Automatic "code cleanliness" checks
+
+* Managed merge access (can give access through the robot, but not directly)
+
+* Label management
+
+* Managing access to testing resources (e.g., buildbot)
+
+* Batch testing of merge requests (integration testing)
+
+* Handling test data uploads (e.g., ExternalData)
+
+Design
+------
+
+* Stateless
+
+  - All state is stored on the hosting service and in Git
+
+  - Can be restarted without worry
+
+* Robust
+
+  - If it goes down, it can pick up where it left off
+
+  - Logs errors (``Error: failed to merge the tree: ???``)
+
+* Abstracted over hosting services
+
+  - GitLab support now
+
+  - Github possible
+
+Implementation Strategy
+-----------------------
+
+* A separate program listens for ``POST`` requests over HTTP from Gitlab (or
+  any webhook delivery system)
+
+* Categorizes the request and writes the data with the assigned category into
+  a directory as a JSON file
+
+* A ``director`` watches this directory and processes them in order
+
+* Depending on the outcome, the JSON file is moved into one of ``accept``,
+  ``reject``, or ``fail`` directories with a timestamp and file indicating the
+  reason for the failure or rejection
+
+* Also supports retrying jobs (e.g., on a failed push for a merge action;
+  retrying the merge later is acceptable)
+
+Implementation
+--------------
+
+* Graceful error handling
+
+* Handles Unicode cleanly
+
+* Separation between mechanism and policy
+
+* Implemented in Rust
+
+* Fast (reports in seconds rather than minutes)
+
+* Clean multithreading
+
+Actions
+=======
+
+How they work
+-------------
+
+1. A comment is made on the hosting service
+
+2. The director receives a webhook for the new comment
+
+3. The comment body is scanned for ``Do:`` commands in trailers
+
+4. For any commands found, permissions and consistency are verified (e.g.,
+   ``test`` and ``merge`` make no sense together)
+
+5. The requested actions are performed
+
+check
+-----
+
+* Can enforce the project's preferred cleanliness policies including:
+
+  - Submodule verification
+
+  - Formatting
+
+  - Commit messages
+
+  - Path names
+
+  - Symlinks
+
+* Most can be run either as a per-commit check (current) or topic checks
+  (pending tests and review)
+
+* Can also check topic topology: no root commits, enforcing third-party
+  branches are handled well
+
+test
+----
+
+* Hands off requests to the appropriate backend
+
+  - Buildbot "job" file format
+
+  - Create a hidden ref on the main repository for use by nightly machines
+
+* Other backends possible
+
+reformat
+--------
+
+* Rewrites commits to adhere to code formatting standards of the project
+
+* Preserves branch topology (i.e., merge commits stay as merge commits)
+
+* Can remove manual reformatting commits
+
+* Can handle any "rewriting" code formatter. ``clang-format`` and ``autopep8``
+  are being used today
+
+* May also be used for things such as Doxygen comment reformatting or
+  copyright years
+
+* Not all checkers are reformatters; they must rewrite the expected output,
+  not just what's wrong with it (e.g., ``flake8`` does not reformat)
+
+stage
+-----
+
+* Manages a ``stage`` branch on top of an integration branch for batch testing
+
+* Used by CMake to test a collection of topics across all nightly machines
+
+* Any update to the base branch respins the stage merges
+
+* Merge conflicts report back to the discussion and remove the topic from the
+  stage
+
+* Maintains a "first come, first served" policy
+
+stage
+-----
+
+* Here, three branches have been staged on top of ``master``:
+
+.. raw:: html
+    :file: stage.html
+
+stage
+-----
+
+* If the second topic is updated and staged again, it is pushed to the end of
+  the line:
+
+.. raw:: html
+    :file: stage-rewrite.html
+
+stage
+-----
+
+* If the master branch is updated to conflict with a topic, the topic is
+  removed from the stage:
+
+.. raw:: html
+    :file: stage-conflict.html
+
+merge
+-----
+
+* Collects feedback on the topic from the discussion.
+
+  - Looks at comments for ``+1``, ``+2``, etc.
+
+  - Also uses emoji for feedback (e.g., 🎉)
+
+* Formats the commit message
+
+* Collects merge conflict information
+
+  - Including checking for submodule resolutions
+
+  - Actually posts it back to the discussion
+
+follow
+------
+
+* Creates a stable reference for nightly testing
+
+* Ensures that all nightly machines test the same commit (instead of grabbing
+  a commit from a few hours later)
+
+Future Work
+===========
+
+Features
+--------
+
+* Milestone maintenance (marking issues as ``Fixed in``)
+
+* Label maintenence (e.g., based on stage or testing status)
+
+* Look at ``Rejected-by`` or ``-1`` comments
+
+* Require reviewer approval
+
+* Greet new contributors
+
+* Check for status checks (e.g., Travis or Buildbot)
+
+Features
+--------
+
+* Assigning reviews based on code editing history
+
+* Github support
+
+* Handling backports automatically
+
+.. raw:: html
+    :file: backport.html
